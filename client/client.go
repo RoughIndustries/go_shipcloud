@@ -13,37 +13,31 @@ import (
 
 	//"strings"
 
-	"github.com/RoughIndustries/go_shopware/errors"
-	"github.com/RoughIndustries/go_shopware/models"
+	"github.com/RoughIndustries/go_shipcloud/errors"
+	"github.com/RoughIndustries/go_shipcloud/models"
+)
+
+const (
+	shipcloudAPIBaseURL = "https://api.shipcloud.io"
 )
 
 type Client struct {
-	privateToken       string
-	shopwareAPIBaseURL string
-	contextToken       string
-	Context            models.Context
+	privateToken string
 }
 
 type listOutputCallback func(v json.RawMessage) error
 
 // NewClient creates a new Streak API client instance.
-func NewClient(shopwareAPIBaseURL string, privateToken string) *Client {
-
+func NewClient(privateToken string) *Client {
 	c := &Client{
-		shopwareAPIBaseURL: shopwareAPIBaseURL,
-		privateToken:       privateToken,
+		privateToken: privateToken,
 	}
-	future := &models.Context{}
-	c.do("GET", "/store-api/v3/context", nil, future)
-	c.contextToken = future.Token
-	c.Context = *future
-
 	return c
 
 }
 
 func (c *Client) do(method, path string, input, output interface{}) error {
-	url := c.shopwareAPIBaseURL + path
+	url := shipcloudAPIBaseURL + path
 
 	req, err := c.createRequest(method, url, input)
 	if err != nil {
@@ -61,7 +55,7 @@ func (c *Client) do(method, path string, input, output interface{}) error {
 }
 
 func (c *Client) doBytes(method, path string, input interface{}) ([]byte, error) {
-	url := c.shopwareAPIBaseURL + path
+	url := shipcloudAPIBaseURL + path
 
 	req, err := c.createRequest(method, url, input)
 	if err != nil {
@@ -80,7 +74,7 @@ func (c *Client) doBytes(method, path string, input interface{}) ([]byte, error)
 }
 
 func (c *Client) doList(method, path string, input interface{}, outputCallback listOutputCallback) error {
-	nextURL := c.shopwareAPIBaseURL + path + "?results=25"
+	nextURL := shipcloudAPIBaseURL + path + "?results=25"
 
 	for {
 		req, err := c.createRequest(method, nextURL, input)
@@ -165,10 +159,7 @@ func (c *Client) createRequest(method, url string, bodyObject interface{}) (req 
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("sw-access-key", c.privateToken)
-	if c.contextToken != "" {
-		req.Header.Set("sw-context-token", c.contextToken)
-	}
-	//req.Header.Add("Authorization", "Basic "+basicAuth(c.privateToken, ""))
+	req.Header.Add("Authorization", "Basic "+basicAuth(c.privateToken, ""))
 	//req.Header.Set("Authorization", "StreakToken "+c.privateToken)
 
 	// no keep-alive
